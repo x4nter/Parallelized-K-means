@@ -1,4 +1,3 @@
-from mpi4py import MPI
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
