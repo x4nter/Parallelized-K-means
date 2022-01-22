@@ -6,7 +6,7 @@ from sklearn.datasets import make_blobs
 import random
 
 comm = MPI.COMM_WORLD
-rank = comm.Get_rank
+rank = comm.Get_rank()
 
 if rank == 0:
 
@@ -25,7 +25,7 @@ if rank == 0:
     colors = ['Red', 'Yellow', 'Green']
 
     # Broadcast initial data for other processes
-    comm.bcast(Sinv, root=0)
+    Sinv = comm.bcast(Sinv, root=0)
 
     # Run until reached maximum allowed iterations
     for t in range(max_iter):
@@ -33,22 +33,22 @@ if rank == 0:
         ind_prev = ind_cur
         clusters = []
     
-        comm.bcast(mu_centroid, root=0)
+        mu_centroid = comm.bcast(mu_centroid, root=0)
 
-        for i in range(1,comm.Get_size):
-            print(datapoints[i-1])
+        for i in range(1,comm.Get_size()):
             comm.send(datapoints[i-1], i, 1)
         
-        i = comm.Get_size
+        i = comm.Get_size()-1
         while(i < len(datapoints)):
             cluster = np.empty(shape=2)
             status = MPI.Status()
-            comm.recv(cluster, MPI.ANY_SOURCE, 1, status)
-            comm.send(datapoints[i], status.Get_source, 1)
+            cluster = comm.recv(source=MPI.ANY_SOURCE, tag=1, status=status)
+            comm.send(datapoints[i], status.Get_source(), 1)
             i += 1
             clusters.append(cluster)
 
         getCentroids = []
+        print(clusters)
 
         for j in range(len(clusters)):
             getCentroids.append(clusters[j][0])
@@ -63,8 +63,8 @@ if rank == 0:
         mu_centroid = temp
 
         # Send reset signal
-        for i in range(1, comm.Get_size):
-            resetSig = [np.nan, np.nan]
+        for i in range(1, comm.Get_size()):
+            resetSig = np.array([])
             comm.send(resetSig, i, 1)
 
         # Stop looping if the centroids are not changing
@@ -72,7 +72,7 @@ if rank == 0:
             break
 
     # Send reset signal
-    resetSig = -1
+    resetSig = np.array([])
     comm.bcast(resetSig, root=0)
 
     # Create a scattered plot
@@ -90,22 +90,22 @@ if rank == 0:
     plt.show()
 
 else:
-    mu_centroid = []
+    mu_centroid = np.array([])
     Sinv = []
     clusters = []
-    comm.bcast(Sinv, root=0)
+    Sinv = comm.bcast(Sinv, root=0)
 
     while True:
-        comm.bcast(mu_centroid, root=0)
+        mu_centroid = comm.bcast(mu_centroid, root=0)
 
-        if mu_centroid == -1:
+        if mu_centroid.size == 0:
             break
 
         while True:
-            datapoint = np.empty(shape=2)
-            comm.recv(datapoint, 0, 1, None)
+            datapoint = np.array([])
+            datapoint = comm.recv(source=0, tag=1)
 
-            if datapoint == [np.nan, np.nan]:
+            if datapoint.size == 0:
                 break
 
             distance = []
