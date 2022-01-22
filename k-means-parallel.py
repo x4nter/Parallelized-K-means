@@ -46,9 +46,12 @@ if rank == 0:
             comm.send(datapoints[i], status.Get_source(), 1)
             i += 1
             clusters.append(cluster)
+        
+        for i in range(1, comm.Get_size()):
+            cluster = comm.recv(source=MPI.ANY_SOURCE, tag=1, status=status)
+            clusters.append(cluster)
 
         getCentroids = []
-        print(clusters)
 
         for j in range(len(clusters)):
             getCentroids.append(clusters[j][0])
@@ -98,7 +101,7 @@ else:
     while True:
         mu_centroid = comm.bcast(mu_centroid, root=0)
 
-        if mu_centroid.size == 0:
+        if len(mu_centroid) == 0:
             break
 
         while True:
